@@ -73,8 +73,7 @@ CONFIG_IPV4=yes
 EOF
     echo "$IP_LAN" > /etc/net/ifaces/"$INTERFACE_LAN"/ipv4address
     
-    # Настройка шлюза
-    echo "default via $DEFAULT_GW" > /etc/net/ifaces/"$INTERFACE_LAN"/ipv4route
+
     
     # Перезапуск службы network
     systemctl restart network
