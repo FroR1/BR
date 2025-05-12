@@ -88,13 +88,14 @@ configure_tunnel() {
     mkdir -p /etc/net/ifaces/"$TUNNEL_NAME"
     cat > /etc/net/ifaces/"$TUNNEL_NAME"/options << EOF
 BOOTPROTO=static
-TYPE=tunnel
+TYPE=iptun
+TUNTYPE=gre
 DISABLED=no
 CONFIG_IPV4=yes
-TUNNEL_TYPE=gre
-TUNNEL_LOCAL="$TUNNEL_LOCAL_IP"
-TUNNEL_REMOTE="$TUNNEL_REMOTE_IP"
-TUNNEL_TTL=64
+TUNLOCAL="$TUNNEL_LOCAL_IP"
+TUNREMOTE="$TUNNEL_REMOTE_IP"
+TUNOPTIONS='ttl 64'
+HOST=ens192
 EOF
     echo "$TUNNEL_IP" > /etc/net/ifaces/"$TUNNEL_NAME"/ipv4address
     
