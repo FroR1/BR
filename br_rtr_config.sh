@@ -140,12 +140,12 @@ enable_ip_forwarding() {
     if [ "$current_forwarding" -eq 0 ]; then
         log_message "IP forwarding is disabled. Enabling temporarily and permanently..."
         echo 1 > /proc/sys/net/ipv4/ip_forward 2>>"$LOG_FILE" || { log_message "Error: Failed to enable IP forwarding temporarily."; return 1; }
-        if grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf; then
-            sed -i '/^net.ipv4.ip_forward/c\net.ipv4.ip_forward = 1' /etc/sysctl.conf 2>>"$LOG_FILE" || { log_message "Error: Failed to modify sysctl.conf."; return 1; }
-        elif grep -q "^#net.ipv4.ip_forward" /etc/sysctl.conf; then
-            sed -i 's/^#net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf 2>>"$LOG_FILE" || { log_message "Error: Failed to modify sysctl.conf."; return 1; }
+        if grep -q "^net.ipv4.ip_forward" /etc/net/sysctl.conf; then
+            sed -i '/^net.ipv4.ip_forward/c\net.ipv4.ip_forward = 1' /etc/net/sysctl.conf 2>>"$LOG_FILE" || { log_message "Error: Failed to modify sysctl.conf."; return 1; }
+        elif grep -q "^#net.ipv4.ip_forward" /etc/net/sysctl.conf; then
+            sed -i 's/^#net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/net/sysctl.conf 2>>"$LOG_FILE" || { log_message "Error: Failed to modify sysctl.conf."; return 1; }
         else
-            echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf 2>>"$LOG_FILE" || { log_message "Error: Failed to append to sysctl.conf."; return 1; }
+            echo "net.ipv4.ip_forward = 1" >> /etc/net/sysctl.conf 2>>"$LOG_FILE" || { log_message "Error: Failed to append to sysctl.conf."; return 1; }
         fi
         sysctl -p >> "$LOG_FILE" 2>&1 || { log_message "Error: Failed to apply sysctl settings."; return 1; }
         log_message "IP forwarding enabled."
