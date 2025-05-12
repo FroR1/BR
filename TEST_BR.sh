@@ -11,21 +11,7 @@ DEFAULT_GW="172.16.5.1"
 HOSTNAME="br-rtr.au-team.irpo"
 TIME_ZONE="Asia/Novosibirsk"
 
-# Функция проверки наличия команды
-check_command() {
-    if ! command -v "$1" &> /dev/null; then
-        echo "Ошибка: Команда $1 не найдена. Установите пакет $2."
-        exit 1
-    fi
-}
-
-# Проверка необходимых утилит
-check_command "ip" "iproute2"
-check_command "nft" "nftables"
-check_command "hostnamectl" "systemd"
-check_command "timedatectl" "systemd"
-
-# Функция для проверки существования интерфейса
+# Функция проверки существования интерфейса
 check_interface() {
     if ! ip link show "$1" &> /dev/null; then
         echo "Ошибка: Интерфейс $1 не существует."
@@ -69,6 +55,14 @@ configure_interfaces() {
 # Функция настройки nftables и IP forwarding
 configure_nftables() {
     echo "Настройка nftables и IP forwarding..."
+    
+    # Установка nftables, если отсутствует
+    if ! dpkg -l | grep -q "nftables"; then
+        echo "Установка пакета nftables..."
+        apt-get update
+        apt-get install -y nftables
+    fi
+    
     LAN_NETWORK=$(get_network "$IP_LAN")
     
     # Включение IP forwarding
