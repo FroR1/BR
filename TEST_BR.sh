@@ -214,7 +214,7 @@ while true; do
     echo "7. Настроить пользователя"
     echo "8. Настроить баннер"
     echo "9. Выполнить все настройки"
-    echo "10. Выход"
+    echo "0. Выход"
     read -p "Выберите опцию: " option
     
     case $option in
@@ -236,7 +236,7 @@ while true; do
             configure_banner
             echo "Все настройки выполнены."
             ;;
-        10) echo "Выход."; exit 0 ;;
+        0) echo "Выход."; exit 0 ;;
         *) echo "Неверный выбор." ;;
     esac
 done
