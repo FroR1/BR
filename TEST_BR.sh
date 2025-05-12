@@ -63,9 +63,6 @@ TYPE=eth
 DISABLED=no
 CONFIG_IPV4=yes
 EOF
-    ip addr flush dev "$INTERFACE_ISP"
-    ip link set "$INTERFACE_ISP" up
-    
     # Настройка интерфейса LAN
     mkdir -p /etc/net/ifaces/"$INTERFACE_LAN"
     cat > /etc/net/ifaces/"$INTERFACE_LAN"/options << EOF
@@ -88,10 +85,6 @@ EOF
 configure_tunnel() {
     echo "Настройка GRE-туннеля через /etc/net/ifaces/..."
     
-    # Настройка туннеля
-    ip tunnel add "$TUNNEL_NAME" mode gre local "$TUNNEL_LOCAL_IP" remote "$TUNNEL_REMOTE_IP" ttl 64
-    ip addr add "$TUNNEL_IP" dev "$TUNNEL_NAME"
-    ip link set "$TUNNEL_NAME" up
     
     # Сохранение конфигурации туннеля
     mkdir -p /etc/net/ifaces/"$TUNNEL_NAME"
