@@ -87,7 +87,6 @@ configure_tunnel() {
     # Сохранение конфигурации туннеля
     mkdir -p /etc/net/ifaces/"$TUNNEL_NAME"
     cat > /etc/net/ifaces/"$TUNNEL_NAME"/options << EOF
-BOOTPROTO=static
 TYPE=iptun
 TUNTYPE=gre
 DISABLED=no
