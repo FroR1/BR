@@ -2,6 +2,17 @@
 
 # Скрипт для настройки маршрутизатора BR-RTR
 
+# Установка зависимостей при запуске скрипта
+install_dependencies() {
+    echo "Установка зависимостей..."
+    apt-get update
+    apt-get install -y iproute2 nftables systemd
+    echo "Зависимости установлены."
+}
+
+# Вызов установки зависимостей
+install_dependencies
+
 # Начальные значения переменных
 INTERFACE_ISP="ens192"
 INTERFACE_LAN="ens224"
@@ -17,6 +28,7 @@ BANNER_TEXT="Authorized access only"
 TUNNEL_LOCAL_IP="172.16.5.2"  # IP BR-RTR к ISP
 TUNNEL_REMOTE_IP="172.16.4.2" # IP HQ-RTR к ISP
 TUNNEL_IP="10.0.0.1/30"       # IP для туннеля на BR-RTR
+TUNNEL_NAME="gre1"
 
 # Функция проверки существования интерфейса
 check_interface() {
@@ -39,32 +51,64 @@ get_network() {
     echo "$(( (net >> 24) & 255 )).$(( (net >> 16) & 255 )).$(( (net >> 8) & 255 )).$(( net & 255 ))/$mask"
 }
 
-# Функция настройки сетевых интерфейсов
+# Функция настройки сетевых интерфейсов через /etc/net/ifaces/
 configure_interfaces() {
-    echo "Настройка интерфейсов..."
-    check_interface "$INTERFACE_ISP"
-    check_interface "$INTERFACE_LAN"
+    echo "Настройка интерфейсов через /etc/net/ifaces/..."
     
+    # Настройка интерфейса ISP
+    mkdir -p /etc/net/ifaces/"$INTERFACE_ISP"
+    cat > /etc/net/ifaces/"$INTERFACE_ISP"/options << EOF
+BOOTPROTO=dhcp
+TYPE=eth
+DISABLED=no
+CONFIG_IPV4=yes
+EOF
     ip addr flush dev "$INTERFACE_ISP"
-    ip addr add "$IP_ISP" dev "$INTERFACE_ISP"
     ip link set "$INTERFACE_ISP" up
     
-    ip addr flush dev "$INTERFACE_LAN"
-    ip addr add "$IP_LAN" dev "$INTERFACE_LAN"
-    ip link set "$INTERFACE_LAN" up
+    # Настройка интерфейса LAN
+    mkdir -p /etc/net/ifaces/"$INTERFACE_LAN"
+    cat > /etc/net/ifaces/"$INTERFACE_LAN"/options << EOF
+BOOTPROTO=static
+TYPE=eth
+DISABLED=no
+CONFIG_IPV4=yes
+EOF
+    echo "$IP_LAN" > /etc/net/ifaces/"$INTERFACE_LAN"/ipv4address
     
-    ip route flush default
-    ip route add default via "$DEFAULT_GW" dev "$INTERFACE_ISP"
+    # Настройка шлюза
+    echo "GATEWAY=$DEFAULT_GW" > /etc/net/ifaces/"$INTERFACE_LAN"/gateway
     
+    # Перезапуск службы network
+    systemctl restart network
     echo "Интерфейсы настроены."
 }
 
-# Функция настройки GRE-туннеля
+# Функция настройки GRE-туннеля через /etc/net/ifaces/
 configure_tunnel() {
-    echo "Настройка GRE-туннеля..."
-    ip tunnel add gre1 mode gre local "$TUNNEL_LOCAL_IP" remote "$TUNNEL_REMOTE_IP" ttl 64
-    ip addr add "$TUNNEL_IP" dev gre1
-    ip link set gre1 up
+    echo "Настройка GRE-туннеля через /etc/net/ifaces/..."
+    
+    # Настройка туннеля
+    ip tunnel add "$TUNNEL_NAME" mode gre local "$TUNNEL_LOCAL_IP" remote "$TUNNEL_REMOTE_IP" ttl 64
+    ip addr add "$TUNNEL_IP" dev "$TUNNEL_NAME"
+    ip link set "$TUNNEL_NAME" up
+    
+    # Сохранение конфигурации туннеля
+    mkdir -p /etc/net/ifaces/"$TUNNEL_NAME"
+    cat > /etc/net/ifaces/"$TUNNEL_NAME"/options << EOF
+BOOTPROTO=static
+TYPE=tunnel
+DISABLED=no
+CONFIG_IPV4=yes
+TUNNEL_TYPE=gre
+TUNNEL_LOCAL="$TUNNEL_LOCAL_IP"
+TUNNEL_REMOTE="$TUNNEL_REMOTE_IP"
+TUNNEL_TTL=64
+EOF
+    echo "$TUNNEL_IP" > /etc/net/ifaces/"$TUNNEL_NAME"/ipv4address
+    
+    # Перезапуск службы network
+    systemctl restart network
     echo "GRE-туннель настроен."
 }
 
@@ -102,7 +146,7 @@ table inet nat {
 EOF
     
     # Применение конфигурации
-    nft -f /etc/nftables.conf
+    nft -f /etc/net/ifaces.conf
     systemctl enable nftables
     systemctl restart nftables
     
