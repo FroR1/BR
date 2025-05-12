@@ -18,7 +18,6 @@ INTERFACE_ISP="ens192"
 INTERFACE_LAN="ens224"
 IP_ISP="172.16.5.2/28"
 IP_LAN="192.168.1.1/27"
-DEFAULT_GW="172.16.5.1"
 HOSTNAME="br-rtr.au-team.irpo"
 TIME_ZONE="Asia/Novosibirsk"
 USERNAME="net_admin"
@@ -189,16 +188,15 @@ edit_data() {
         echo "2. Интерфейс к LAN: $INTERFACE_LAN"
         echo "3. IP для ISP: $IP_ISP"
         echo "4. IP для LAN: $IP_LAN"
-        echo "5. Шлюз по умолчанию: $DEFAULT_GW"
-        echo "6. Hostname: $HOSTNAME"
-        echo "7. Часовой пояс: $TIME_ZONE"
-        echo "8. Имя пользователя: $USERNAME"
-        echo "9. UID пользователя: $UID"
-        echo "10. Пароль пользователя: $PASSWORD"
-        echo "11. Текст баннера: $BANNER_TEXT"
-        echo "12. Локальный IP для туннеля(IP интерфейса ens192 Этого устройства который с ISP): $TUNNEL_LOCAL_IP"
-        echo "13. Удаленный IP для туннеля(IP интерфейса ens192 Другого устройства который с ISP): $TUNNEL_REMOTE_IP"
-        echo "14. IP для туннеля: $TUNNEL_IP"
+        echo "5. Hostname: $HOSTNAME"
+        echo "6. Часовой пояс: $TIME_ZONE"
+        echo "7. Имя пользователя: $USERNAME"
+        echo "8. UID пользователя: $UID"
+        echo "9. Пароль пользователя: $PASSWORD"
+        echo "10. Текст баннера: $BANNER_TEXT"
+        echo "11. Локальный IP для туннеля(IP интерфейса ens192 Этого устройства который с ISP): $TUNNEL_LOCAL_IP"
+        echo "12. Удаленный IP для туннеля(IP интерфейса ens192 Другого устройства который с ISP): $TUNNEL_REMOTE_IP"
+        echo "13. IP для туннеля: $TUNNEL_IP"
         echo "0. Назад"
         echo "Введите номер параметра для изменения (или 0 для выхода):"
         read choice
@@ -211,25 +209,23 @@ edit_data() {
                IP_ISP=${input:-$IP_ISP} ;;
             4) read -p "Новый IP для LAN [$IP_LAN]: " input
                IP_LAN=${input:-$IP_LAN} ;;
-            5) read -p "Новый шлюз по умолчанию [$DEFAULT_GW]: " input
-               DEFAULT_GW=${input:-$DEFAULT_GW} ;;
-            6) read -p "Новый hostname [$HOSTNAME]: " input
+            5) read -p "Новый hostname [$HOSTNAME]: " input
                HOSTNAME=${input:-$HOSTNAME} ;;
-            7) read -p "Новый часовой пояс [$TIME_ZONE]: " input
+            6) read -p "Новый часовой пояс [$TIME_ZONE]: " input
                TIME_ZONE=${input:-$TIME_ZONE} ;;
-            8) read -p "Новое имя пользователя [$USERNAME]: " input
+            7) read -p "Новое имя пользователя [$USERNAME]: " input
                USERNAME=${input:-$USERNAME} ;;
-            9) read -p "Новый UID пользователя [$UID]: " input
+            8) read -p "Новый UID пользователя [$UID]: " input
                UID=${input:-$UID} ;;
-            10) read -p "Новый пароль пользователя [$PASSWORD]: " input
+            9) read -p "Новый пароль пользователя [$PASSWORD]: " input
                 PASSWORD=${input:-$PASSWORD} ;;
-            11) read -p "Новый текст баннера [$BANNER_TEXT]: " input
+            10) read -p "Новый текст баннера [$BANNER_TEXT]: " input
                 BANNER_TEXT=${input:-$BANNER_TEXT} ;;
-            12) read -p "Новый локальный IP для туннеля [$TUNNEL_LOCAL_IP]: " input
+            11) read -p "Новый локальный IP для туннеля [$TUNNEL_LOCAL_IP]: " input
                 TUNNEL_LOCAL_IP=${input:-$TUNNEL_LOCAL_IP} ;;
-            13) read -p "Новый удаленный IP для туннеля [$TUNNEL_REMOTE_IP]: " input
+            12) read -p "Новый удаленный IP для туннеля [$TUNNEL_REMOTE_IP]: " input
                 TUNNEL_REMOTE_IP=${input:-$TUNNEL_REMOTE_IP} ;;
-            14) read -p "Новый IP для туннеля [$TUNNEL_IP]: " input
+            13) read -p "Новый IP для туннеля [$TUNNEL_IP]: " input
                 TUNNEL_IP=${input:-$TUNNEL_IP} ;;
             0) return ;;
             *) echo "Неверный выбор." ;;
