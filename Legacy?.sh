@@ -157,29 +157,25 @@ set_timezone() {
     echo "Часовой пояс установлен: $TIME_ZONE"
 }
 
-# Функция настройки пользователя
+# Функция настройки пользователя (без проверки на существование)
 configure_user() {
     echo "Настройка пользователя..."
-    if id "$USERNAME" &> /dev/null; then
-        echo "Пользователь $USERNAME уже существует."
+    # Запрос USER_UID, если не установлен
+    if [ -z "$USER_UID" ]; then
+        read -p "Введите UID для пользователя $USERNAME: " USER_UID
+    fi
+    # Попытка создания пользователя с указанным USER_UID
+    if adduser --uid "$USER_UID" --gecos "" "$USERNAME"; then
+        # Запрос пароля у пользователя
+        read -s -p "Введите пароль для пользователя $USERNAME: " PASSWORD
+        echo
+        echo "$USERNAME:$PASSWORD" | chpasswd
+        echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+        usermod -aG wheel "$USERNAME"
+        echo "Пользователь $USERNAME создан с UID $USER_UID и правами sudo."
     else
-        # Запрос USER_UID, если не установлен
-        if [ -z "$USER_UID" ]; then
-            read -p "Введите UID для пользователя $USERNAME: " USER_UID
-        fi
-        # Создание пользователя с указанным USER_UID
-        if adduser --uid "$USER_UID" --gecos "" "$USERNAME"; then
-            # Запрос пароля у пользователя
-            read -s -p "Введите пароль для пользователя $USERNAME: " PASSWORD
-            echo
-            echo "$USERNAME:$PASSWORD" | chpasswd
-            echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-            usermod -aG wheel "$USERNAME"
-            echo "Пользователь $USERNAME создан с UID $USER_UID и правами sudo."
-        else
-            echo "Ошибка: Не удалось создать пользователя $USERNAME."
-            exit 1
-        fi
+        echo "Ошибка: Не удалось создать пользователя $USERNAME."
+        exit 1
     fi
 }
 
