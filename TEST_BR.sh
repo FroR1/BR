@@ -6,7 +6,7 @@
 install_dependencies() {
     echo "Установка зависимостей..."
     apt-get update
-    apt-get install -y iproute2 nftables systemd
+    apt-get install -y iproute2 nftables systemd frr
     echo "Зависимости установлены."
 }
 
@@ -18,6 +18,7 @@ INTERFACE_ISP="ens192"
 INTERFACE_LAN="ens224"
 IP_ISP="172.16.5.2/28"
 IP_LAN="192.168.1.1/27"
+DEFAULT_GW="172.16.5.1"
 HOSTNAME="br-rtr.au-team.irpo"
 TIME_ZONE="Asia/Novosibirsk"
 USERNAME="net_admin"
@@ -26,7 +27,7 @@ PASSWORD="P@$$word"
 BANNER_TEXT="Authorized access only"
 TUNNEL_LOCAL_IP="172.16.5.2"  # IP BR-RTR к ISP
 TUNNEL_REMOTE_IP="172.16.4.2" # IP HQ-RTR к ISP
-TUNNEL_IP="10.0.0.1/30"       # IP для туннеля на BR-RTR
+TUNNEL_IP="172.16.100.2/28"   # IP для туннеля на BR-RTR
 TUNNEL_NAME="gre1"
 
 # Функция проверки существования интерфейса
@@ -57,11 +58,14 @@ configure_interfaces() {
     # Настройка интерфейса ISP
     mkdir -p /etc/net/ifaces/"$INTERFACE_ISP"
     cat > /etc/net/ifaces/"$INTERFACE_ISP"/options << EOF
-BOOTPROTO=static
+BOOTPROTO=dhcp
 TYPE=eth
 DISABLED=no
 CONFIG_IPV4=yes
 EOF
+    ip addr flush dev "$INTERFACE_ISP"
+    ip link set "$INTERFACE_ISP" up
+    
     # Настройка интерфейса LAN
     mkdir -p /etc/net/ifaces/"$INTERFACE_LAN"
     cat > /etc/net/ifaces/"$INTERFACE_LAN"/options << EOF
@@ -72,7 +76,8 @@ CONFIG_IPV4=yes
 EOF
     echo "$IP_LAN" > /etc/net/ifaces/"$INTERFACE_LAN"/ipv4address
     
-
+    # Настройка шлюза
+    echo "GATEWAY=$DEFAULT_GW" > /etc/net/ifaces/"$INTERFACE_LAN"/gateway
     
     # Перезапуск службы network
     systemctl restart network
@@ -83,17 +88,22 @@ EOF
 configure_tunnel() {
     echo "Настройка GRE-туннеля через /etc/net/ifaces/..."
     
+    # Настройка туннеля
+    ip tunnel add "$TUNNEL_NAME" mode gre local "$TUNNEL_LOCAL_IP" remote "$TUNNEL_REMOTE_IP" ttl 64
+    ip addr add "$TUNNEL_IP" dev "$TUNNEL_NAME"
+    ip link set "$TUNNEL_NAME" up
     
     # Сохранение конфигурации туннеля
     mkdir -p /etc/net/ifaces/"$TUNNEL_NAME"
     cat > /etc/net/ifaces/"$TUNNEL_NAME"/options << EOF
-TYPE=iptun
-TUNTYPE=gre
+BOOTPROTO=static
+TYPE=tunnel
 DISABLED=no
-TUNLOCAL="$TUNNEL_LOCAL_IP"
-TUNREMOTE="$TUNNEL_REMOTE_IP"
-TUNOPTIONS='ttl 64'
-HOST=ens192
+CONFIG_IPV4=yes
+TUNNEL_TYPE=gre
+TUNNEL_LOCAL="$TUNNEL_LOCAL_IP"
+TUNNEL_REMOTE="$TUNNEL_REMOTE_IP"
+TUNNEL_TTL=64
 EOF
     echo "$TUNNEL_IP" > /etc/net/ifaces/"$TUNNEL_NAME"/ipv4address
     
@@ -136,7 +146,7 @@ table inet nat {
 EOF
     
     # Применение конфигурации
-    nft -f /etc/net/ifaces.conf
+    nft -f /etc/nftables.conf
     systemctl enable nftables
     systemctl restart nftables
     
@@ -178,6 +188,34 @@ configure_banner() {
     echo "Баннер настроен."
 }
 
+# Функция настройки OSPF
+configure_ospf() {
+    echo "Настройка OSPF..."
+    
+    # Активация OSPF в FRR
+    sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
+    systemctl enable --now frr
+    
+    # Настройка через vtysh
+    vtysh << EOF
+configure terminal
+router ospf
+passive-interface default
+network 172.16.100.0/28 area 0
+network 192.168.1.0/27 area 0
+exit
+interface $TUNNEL_NAME
+no ip ospf passive
+ip ospf authentication-key PLAINPAS
+ip ospf authentication
+exit
+do wr mem
+exit
+EOF
+    
+    echo "OSPF настроен."
+}
+
 # Функция редактирования данных
 edit_data() {
     while true; do
@@ -187,15 +225,16 @@ edit_data() {
         echo "2. Интерфейс к LAN: $INTERFACE_LAN"
         echo "3. IP для ISP: $IP_ISP"
         echo "4. IP для LAN: $IP_LAN"
-        echo "5. Hostname: $HOSTNAME"
-        echo "6. Часовой пояс: $TIME_ZONE"
-        echo "7. Имя пользователя: $USERNAME"
-        echo "8. UID пользователя: $UID"
-        echo "9. Пароль пользователя: $PASSWORD"
-        echo "10. Текст баннера: $BANNER_TEXT"
-        echo "11. Локальный IP для туннеля(IP интерфейса ens192 Этого устройства который с ISP): $TUNNEL_LOCAL_IP"
-        echo "12. Удаленный IP для туннеля(IP интерфейса ens192 Другого устройства который с ISP): $TUNNEL_REMOTE_IP"
-        echo "13. IP для туннеля: $TUNNEL_IP"
+        echo "5. Шлюз по умолчанию: $DEFAULT_GW"
+        echo "6. Hostname: $HOSTNAME"
+        echo "7. Часовой пояс: $TIME_ZONE"
+        echo "8. Имя пользователя: $USERNAME"
+        echo "9. UID пользователя: $UID"
+        echo "10. Пароль пользователя: $PASSWORD"
+        echo "11. Текст баннера: $BANNER_TEXT"
+        echo "12. Локальный IP для туннеля(IP интерфейса ens192 Этого устройства который с ISP): $TUNNEL_LOCAL_IP"
+        echo "13. Удаленный IP для туннеля(IP интерфейса ens192 Другого устройства который с ISP): $TUNNEL_REMOTE_IP"
+        echo "14. IP для туннеля: $TUNNEL_IP"
         echo "0. Назад"
         echo "Введите номер параметра для изменения (или 0 для выхода):"
         read choice
@@ -208,23 +247,25 @@ edit_data() {
                IP_ISP=${input:-$IP_ISP} ;;
             4) read -p "Новый IP для LAN [$IP_LAN]: " input
                IP_LAN=${input:-$IP_LAN} ;;
-            5) read -p "Новый hostname [$HOSTNAME]: " input
+            5) read -p "Новый шлюз по умолчанию [$DEFAULT_GW]: " input
+               DEFAULT_GW=${input:-$DEFAULT_GW} ;;
+            6) read -p "Новый hostname [$HOSTNAME]: " input
                HOSTNAME=${input:-$HOSTNAME} ;;
-            6) read -p "Новый часовой пояс [$TIME_ZONE]: " input
+            7) read -p "Новый часовой пояс [$TIME_ZONE]: " input
                TIME_ZONE=${input:-$TIME_ZONE} ;;
-            7) read -p "Новое имя пользователя [$USERNAME]: " input
+            8) read -p "Новое имя пользователя [$USERNAME]: " input
                USERNAME=${input:-$USERNAME} ;;
-            8) read -p "Новый UID пользователя [$UID]: " input
+            9) read -p "Новый UID пользователя [$UID]: " input
                UID=${input:-$UID} ;;
-            9) read -p "Новый пароль пользователя [$PASSWORD]: " input
+            10) read -p "Новый пароль пользователя [$PASSWORD]: " input
                 PASSWORD=${input:-$PASSWORD} ;;
-            10) read -p "Новый текст баннера [$BANNER_TEXT]: " input
+            11) read -p "Новый текст баннера [$BANNER_TEXT]: " input
                 BANNER_TEXT=${input:-$BANNER_TEXT} ;;
-            11) read -p "Новый локальный IP для туннеля [$TUNNEL_LOCAL_IP]: " input
+            12) read -p "Новый локальный IP для туннеля [$TUNNEL_LOCAL_IP]: " input
                 TUNNEL_LOCAL_IP=${input:-$TUNNEL_LOCAL_IP} ;;
-            12) read -p "Новый удаленный IP для туннеля [$TUNNEL_REMOTE_IP]: " input
+            13) read -p "Новый удаленный IP для туннеля [$TUNNEL_REMOTE_IP]: " input
                 TUNNEL_REMOTE_IP=${input:-$TUNNEL_REMOTE_IP} ;;
-            13) read -p "Новый IP для туннеля [$TUNNEL_IP]: " input
+            14) read -p "Новый IP для туннеля [$TUNNEL_IP]: " input
                 TUNNEL_IP=${input:-$TUNNEL_IP} ;;
             0) return ;;
             *) echo "Неверный выбор." ;;
@@ -240,11 +281,12 @@ while true; do
     echo "2. Настроить сетевые интерфейсы"
     echo "3. Настроить NAT и IP forwarding"
     echo "4. Настроить GRE-туннель"
-    echo "5. Установить hostname"
-    echo "6. Установить часовой пояс"
-    echo "7. Настроить пользователя"
-    echo "8. Настроить баннер"
-    echo "9. Выполнить все настройки"
+    echo "5. Настроить OSPF"
+    echo "6. Установить hostname"
+    echo "7. Установить часовой пояс"
+    echo "8. Настроить пользователя"
+    echo "9. Настроить баннер"
+    echo "10. Выполнить все настройки"
     echo "0. Выход"
     read -p "Выберите опцию: " option
     
@@ -253,14 +295,16 @@ while true; do
         2) configure_interfaces ;;
         3) configure_nftables ;;
         4) configure_tunnel ;;
-        5) set_hostname ;;
-        6) set_timezone ;;
-        7) configure_user ;;
-        8) configure_banner ;;
-        9) 
+        5) configure_ospf ;;
+        6) set_hostname ;;
+        7) set_timezone ;;
+        8) configure_user ;;
+        9) configure_banner ;;
+        10) 
             configure_interfaces
             configure_nftables
             configure_tunnel
+            configure_ospf
             set_hostname
             set_timezone
             configure_user
