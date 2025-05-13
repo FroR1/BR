@@ -158,17 +158,26 @@ set_timezone() {
     echo "Timezone set: $TIME_ZONE"
 }
 
-# Function to configure user
+# Updated function to configure user
 configure_user() {
-    echo "Creating user $USERNAME..."
+    echo "Configuring user..."
     if id "$USERNAME" &> /dev/null; then
         echo "User $USERNAME already exists."
     else
-        adduser "$USERNAME" -u "$UID"
-        echo "$USERNAME:$PASSWORD" | chpasswd
-        echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-        usermod -aG wheel "$USERNAME"
-        echo "User $USERNAME created with UID $UID and sudo rights."
+        # Prompt for UID if not set
+        if [ -z "$UID" ]; then
+            read -p "Enter UID for user $USERNAME: " UID
+        fi
+        # Create user with specified UID and check for success
+        if adduser "$USERNAME" --uid "$UID" --disabled-password --gecos ""; then
+            echo "$USERNAME:$PASSWORD" | chpasswd
+            echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+            usermod -aG wheel "$USERNAME"
+            echo "User $USERNAME created with UID $UID and sudo rights."
+        else
+            echo "Error: Failed to create user $USERNAME."
+            exit 1
+        fi
     fi
 }
 
