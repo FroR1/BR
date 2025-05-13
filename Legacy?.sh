@@ -158,6 +158,7 @@ set_timezone() {
 }
 
 # Функция настройки пользователя (без проверки на существование)
+# Функция настройки пользователя (без проверки на существование и без --gecos)
 configure_user() {
     echo "Настройка пользователя..."
     # Запрос USER_UID, если не установлен
@@ -165,7 +166,7 @@ configure_user() {
         read -p "Введите UID для пользователя $USERNAME: " USER_UID
     fi
     # Попытка создания пользователя с указанным USER_UID
-    if adduser --uid "$USER_UID" --gecos "" "$USERNAME"; then
+    if adduser --uid "$USER_UID" "$USERNAME"; then
         # Запрос пароля у пользователя
         read -s -p "Введите пароль для пользователя $USERNAME: " PASSWORD
         echo
