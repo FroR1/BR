@@ -164,15 +164,24 @@ configure_user() {
     if id "$USERNAME" &> /dev/null; then
         echo "Пользователь $USERNAME уже существует."
     else
-        # Запрос USER_UID, если не установлен
-        if [ -z "$USER_UID" ]; then
-            read -p "Введите UID для пользователя $USERNAME: " USER_UID
+        # Проверка на занятость UID
+        if getent passwd "$USER_UID" > /dev/null; then
+            echo "Ошибка: UID $USER_UID уже используется."
+            exit 1
         fi
         # Создание пользователя с указанным USER_UID
         if adduser --uid "$USER_UID" --gecos "" "$USERNAME"; then
             echo "$USERNAME:$PASSWORD" | chpasswd
-            echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-            usermod -aG wheel "$USERNAME"
+            # Проверка наличия группы wheel
+            if getent group wheel > /dev/null; then
+                usermod -aG wheel "$USERNAME"
+            else
+                echo "Группа wheel не существует. Пропуск добавления в группу wheel."
+            fi
+            # Проверка и добавление в sudoers
+            if ! grep -q "^$USERNAME ALL=(ALL) NOPASSWD:ALL" /etc/sudoers; then
+                echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+            fi
             echo "Пользователь $USERNAME создан с UID $USER_UID и правами sudo."
         else
             echo "Ошибка: Не удалось создать пользователя $USERNAME."
