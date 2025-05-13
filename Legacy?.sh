@@ -197,6 +197,10 @@ configure_banner() {
 configure_ospf() {
     echo "Настройка OSPF..."
     
+    # Вычисление сетей из переменных
+    TUNNEL_NETWORK=$(get_network "$TUNNEL_IP")
+    LAN_NETWORK=$(get_network "$IP_LAN")
+    
     # Активация OSPF в FRR
     if grep -q "ospfd=no" /etc/frr/daemons; then
         sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
@@ -210,8 +214,8 @@ configure_ospf() {
 configure terminal
 router ospf
 passive-interface default
-network 172.16.100.0/28 area 0
-network 10.1.1.0/27 area 0
+network $TUNNEL_NETWORK area 0
+network $LAN_NETWORK area 0
 exit
 interface $TUNNEL_NAME
 no ip ospf passive
