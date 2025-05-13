@@ -168,8 +168,8 @@ configure_user() {
         if [ -z "$USER_UID" ]; then
             read -p "Введите UID для пользователя $USERNAME: " USER_UID
         fi
-        # Создание пользователя с указанным USER_UID и проверка успешности
-        if adduser "$USERNAME" --uid "$USER_UID" --disabled-password --gecos ""; then
+        # Создание пользователя с указанным USER_UID
+        if adduser --uid "$USER_UID" --gecos "" "$USERNAME"; then
             echo "$USERNAME:$PASSWORD" | chpasswd
             echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
             usermod -aG wheel "$USERNAME"
