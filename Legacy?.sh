@@ -22,7 +22,6 @@ HOSTNAME="br-rtr.au-team.irpo"
 TIME_ZONE="Asia/Novosibirsk"
 USERNAME="net_admin"
 USER_UID=1065
-PASSWORD="PASSWORD"
 BANNER_TEXT="Только для авторизованного доступа"
 TUNNEL_LOCAL_IP="172.16.19.2"  # IP BR-RTR к провайдеру
 TUNNEL_REMOTE_IP="172.16.18.2" # IP HQ-RTR к провайдеру
@@ -164,24 +163,18 @@ configure_user() {
     if id "$USERNAME" &> /dev/null; then
         echo "Пользователь $USERNAME уже существует."
     else
-        # Проверка на занятость UID
-        if getent passwd "$USER_UID" > /dev/null; then
-            echo "Ошибка: UID $USER_UID уже используется."
-            exit 1
+        # Запрос USER_UID, если не установлен
+        if [ -z "$USER_UID" ]; then
+            read -p "Введите UID для пользователя $USERNAME: " USER_UID
         fi
         # Создание пользователя с указанным USER_UID
         if adduser --uid "$USER_UID" --gecos "" "$USERNAME"; then
+            # Запрос пароля у пользователя
+            read -s -p "Введите пароль для пользователя $USERNAME: " PASSWORD
+            echo
             echo "$USERNAME:$PASSWORD" | chpasswd
-            # Проверка наличия группы wheel
-            if getent group wheel > /dev/null; then
-                usermod -aG wheel "$USERNAME"
-            else
-                echo "Группа wheel не существует. Пропуск добавления в группу wheel."
-            fi
-            # Проверка и добавление в sudoers
-            if ! grep -q "^$USERNAME ALL=(ALL) NOPASSWD:ALL" /etc/sudoers; then
-                echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-            fi
+            echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+            usermod -aG wheel "$USERNAME"
             echo "Пользователь $USERNAME создан с UID $USER_UID и правами sudo."
         else
             echo "Ошибка: Не удалось создать пользователя $USERNAME."
@@ -251,11 +244,10 @@ edit_data() {
         echo "7. Часовой пояс: $TIME_ZONE"
         echo "8. Имя пользователя: $USERNAME"
         echo "9. UID пользователя: $USER_UID"
-        echo "10. Пароль пользователя: $PASSWORD"
-        echo "11. Текст баннера: $BANNER_TEXT"
-        echo "12. Локальный IP туннеля: $TUNNEL_LOCAL_IP"
-        echo "13. Удаленный IP туннеля: $TUNNEL_REMOTE_IP"
-        echo "14. IP туннеля: $TUNNEL_IP"
+        echo "10. Текст баннера: $BANNER_TEXT"
+        echo "11. Локальный IP туннеля: $TUNNEL_LOCAL_IP"
+        echo "12. Удаленный IP туннеля: $TUNNEL_REMOTE_IP"
+        echo "13. IP туннеля: $TUNNEL_IP"
         echo "0. Назад"
         echo "Введите номер параметра для изменения (или 0 для выхода):"
         read choice
@@ -278,15 +270,13 @@ edit_data() {
                USERNAME=${input:-$USERNAME} ;;
             9) read -p "Новый UID пользователя [$USER_UID]: " input
                USER_UID=${input:-$USER_UID} ;;
-            10) read -p "Новый пароль пользователя [$PASSWORD]: " input
-                PASSWORD=${input:-$PASSWORD} ;;
-            11) read -p "Новый текст баннера [$BANNER_TEXT]: " input
+            10) read -p "Новый текст баннера [$BANNER_TEXT]: " input
                 BANNER_TEXT=${input:-$BANNER_TEXT} ;;
-            12) read -p "Новый локальный IP туннеля [$TUNNEL_LOCAL_IP]: " input
+            11) read -p "Новый локальный IP туннеля [$TUNNEL_LOCAL_IP]: " input
                 TUNNEL_LOCAL_IP=${input:-$TUNNEL_LOCAL_IP} ;;
-            13) read -p "Новый удаленный IP туннеля [$TUNNEL_REMOTE_IP]: " input
+            12) read -p "Новый удаленный IP туннеля [$TUNNEL_REMOTE_IP]: " input
                 TUNNEL_REMOTE_IP=${input:-$TUNNEL_REMOTE_IP} ;;
-            14) read -p "Новый IP туннеля [$TUNNEL_IP]: " input
+            13) read -p "Новый IP туннеля [$TUNNEL_IP]: " input
                 TUNNEL_IP=${input:-$TUNNEL_IP} ;;
             0) return ;;
             *) echo "Неверный выбор." ;;
