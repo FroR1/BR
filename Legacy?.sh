@@ -130,7 +130,11 @@ configure_nftables() {
     
     # Включение IP forwarding
     sysctl -w net.ipv4.ip_forward=1
-    echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+    if grep -q "net.ipv4.ip_forward" /etc/net/sysctl.conf; then
+        sed -i 's/net.ipv4.ip_forward.*/net.ipv4.ip_forward=1/' /etc/net/sysctl.conf
+    else
+        echo "net.ipv4.ip_forward=1" >> /etc/net/sysctl.conf
+    fi
     
     # Создание конфигурации nftables
     cat > /etc/nftables/nftables.nft << EOF
@@ -194,7 +198,11 @@ configure_ospf() {
     echo "Настройка OSPF..."
     
     # Активация OSPF в FRR
-    sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
+    if grep -q "ospfd=no" /etc/frr/daemons; then
+        sed -i 's/ospfd=no/ospfd=yes/' /etc/frr/daemons
+    elif ! grep -q "ospfd=yes" /etc/frr/daemons; then
+        echo "ospfd=yes" >> /etc/frr/daemons
+    fi
     systemctl enable --now frr
     
     # Настройка через vtysh
@@ -298,7 +306,7 @@ while true; do
         2) configure_interfaces ;;
         3) configure_nftables ;;
         4) configure_tunnel ;;
-        5) configure_osp O ;;
+        5) configure_ospf ;;
         6) set_hostname ;;
         7) set_timezone ;;
         8) configure_user ;;
