@@ -72,7 +72,7 @@ function create_sshuser() {
         useradd -u "$SSHUSER_UID" -m "$SSHUSER" || { echo "Ошибка создания пользователя $SSHUSER"; exit 1; }
     fi
     echo "$SSHUSER:$SSHUSER_PASS" | chpasswd
-    usermod -aG sudo "$SSHUSER"
+    usermod -aG wheel "$SSHUSER"
     # Удаляем старую строку в sudoers, если она есть
     sed -i "/^$SSHUSER /d" /etc/sudoers
     # Добавляем новую строку для NOPASSWD
