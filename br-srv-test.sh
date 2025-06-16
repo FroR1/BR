@@ -19,11 +19,10 @@ function input_menu() {
         echo "2. Изменить порт SSH (текущий: $SSH_PORT)"
         echo "3. Изменить имя пользователя SSH (текущее: $SSHUSER)"
         echo "4. Изменить UID пользователя SSH (текущий: $SSHUSER_UID)"
-        echo "5. Изменить пароль пользователя SSH"
-        echo "6. Изменить часовой пояс (текущий: $TZ)"
-        echo "7. Изменить баннер SSH (текущий: $BANNER)"
-        echo "8. Изменить максимальное количество попыток входа (текущее: $MAX_AUTH_TRIES)"
-        echo "9. Изменить все параметры сразу"
+        echo "5. Изменить часовой пояс (текущий: $TZ)"
+        echo "6. Изменить баннер SSH (текущий: $BANNER)"
+        echo "7. Изменить максимальное количество попыток входа (текущее: $MAX_AUTH_TRIES)"
+        echo "8. Изменить все параметры сразу"
         echo "0. Назад"
         read -p "Выберите пункт: " subchoice
         case "$subchoice" in
@@ -32,17 +31,15 @@ function input_menu() {
                SSH_PORT=${input:-$SSH_PORT} ;;
             3) read -p "Введите новое имя пользователя SSH: " SSHUSER ;;
             4) read -p "Введите новый UID пользователя SSH: " SSHUSER_UID ;;
-            5) read -s -p "Введите новый пароль пользователя SSH: " SSHUSER_PASS; echo ;;
-            6) read -p "Введите новый часовой пояс: " TZ ;;
-            7) read -p "Введите новый баннер SSH: " BANNER ;;
-            8) read -p "Введите новое количество попыток входа [$MAX_AUTH_TRIES]: " input
+            5) read -p "Введите новый часовой пояс: " TZ ;;
+            6) read -p "Введите новый баннер SSH: " BANNER ;;
+            7) read -p "Введите новое количество попыток входа [$MAX_AUTH_TRIES]: " input
                MAX_AUTH_TRIES=${input:-$MAX_AUTH_TRIES} ;;
-            9)
+            8)
                 read -p "Имя машины: " HOSTNAME
                 read -p "Порт SSH: " SSH_PORT
                 read -p "Имя пользователя SSH: " SSHUSER
                 read -p "UID пользователя SSH: " SSHUSER_UID
-                read -s -p "Пароль пользователя SSH: " SSHUSER_PASS; echo
                 read -p "Часовой пояс: " TZ
                 read -p "Баннер SSH: " BANNER
                 read -p "Максимальное количество попыток входа: " MAX_AUTH_TRIES
@@ -75,9 +72,7 @@ function create_sshuser() {
         read -p "Введите UID для пользователя $SSHUSER: " SSHUSER_UID
     fi
     if adduser --uid "$SSHUSER_UID" "$SSHUSER"; then
-        read -s -p "Введите пароль для пользователя $SSHUSER: " PASSWORD
-        echo
-        echo "$SSHUSER:$PASSWORD" | chpasswd
+        echo "$SSHUSER:$SSHUSER_PASS" | chpasswd
         echo "$SSHUSER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
         usermod -aG wheel "$SSHUSER"
         echo "Пользователь $SSHUSER создан с UID $SSHUSER_UID и правами sudo."
