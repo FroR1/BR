@@ -8,6 +8,7 @@ SSHUSER_PASS="P@ssw0rd"
 TZ="Asia/Novosibirsk"
 SSH_PORT="2024"
 BANNER="Authorized access only"
+MAX_AUTH_TRIES="2"
 
 # === ФУНКЦИИ ДЛЯ ВВОДА ДАННЫХ ===
 function input_menu() {
@@ -21,7 +22,8 @@ function input_menu() {
         echo "5. Изменить пароль пользователя SSH"
         echo "6. Изменить часовой пояс (текущий: $TZ)"
         echo "7. Изменить баннер SSH (текущий: $BANNER)"
-        echo "8. Изменить все параметры сразу"
+        echo "8. Изменить максимальное количество попыток входа (текущее: $MAX_AUTH_TRIES)"
+        echo "9. Изменить все параметры сразу"
         echo "0. Назад"
         read -p "Выберите пункт: " subchoice
         case "$subchoice" in
@@ -33,7 +35,9 @@ function input_menu() {
             5) read -s -p "Введите новый пароль пользователя SSH: " SSHUSER_PASS; echo ;;
             6) read -p "Введите новый часовой пояс: " TZ ;;
             7) read -p "Введите новый баннер SSH: " BANNER ;;
-            8)
+            8) read -p "Введите новое количество попыток входа [$MAX_AUTH_TRIES]: " input
+               MAX_AUTH_TRIES=${input:-$MAX_AUTH_TRIES} ;;
+            9)
                 read -p "Имя машины: " HOSTNAME
                 read -p "Порт SSH: " SSH_PORT
                 read -p "Имя пользователя SSH: " SSHUSER
@@ -41,6 +45,7 @@ function input_menu() {
                 read -s -p "Пароль пользователя SSH: " SSHUSER_PASS; echo
                 read -p "Часовой пояс: " TZ
                 read -p "Баннер SSH: " BANNER
+                read -p "Максимальное количество попыток входа: " MAX_AUTH_TRIES
                 ;;
             0) break ;;
             *) echo "Ошибка ввода"; sleep 1 ;;
@@ -97,9 +102,9 @@ function config_ssh() {
     grep -q "^AllowUsers" /etc/openssh/sshd_config && \
         sed -i "s/^AllowUsers .*/AllowUsers $SSHUSER/" /etc/openssh/sshd_config || \
         echo "AllowUsers $SSHUSER" >> /etc/openssh/sshd_config
-    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries 2/" /etc/openssh/sshd_config
+    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries $MAX_AUTH_TRIES/" /etc/openssh/sshd_config
     systemctl restart sshd
-    echo "SSH настроен: порт $SSH_PORT, только $SSHUSER, 2 попытки, баннер"
+    echo "SSH настроен: порт $SSH_PORT, только $SSHUSER, $MAX_AUTH_TRIES попытки, баннер"
     sleep 2
 }
 
