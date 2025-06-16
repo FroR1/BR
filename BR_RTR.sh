@@ -15,9 +15,7 @@ install_dependencies
 # Начальные значения переменных (Вариант 7 из Ответы.txt)
 INTERFACE_ISP="ens192"
 INTERFACE_LAN="ens224"
-IP_ISP="172.16.19.2/28"
 IP_LAN="10.1.1.1/27"
-DEFAULT_GW="172.16.19.1"
 HOSTNAME="br-rtr.au-team.irpo"
 TIME_ZONE="Asia/Novosibirsk"
 USERNAME="net_admin"
@@ -63,8 +61,6 @@ TYPE=eth
 DISABLED=no
 CONFIG_IPV4=yes
 EOF
-    echo "$IP_ISP" > /etc/net/ifaces/"$INTERFACE_ISP"/ipv4address
-    echo "default via $DEFAULT_GW" > /etc/net/ifaces/"$INTERFACE_ISP"/ipv4route
     
     mkdir -p /etc/net/ifaces/"$INTERFACE_LAN"
     cat > /etc/net/ifaces/"$INTERFACE_LAN"/options << EOF
@@ -157,17 +153,13 @@ set_timezone() {
     echo "Часовой пояс установлен: $TIME_ZONE"
 }
 
-# Функция настройки пользователя (без проверки на существование)
-# Функция настройки пользователя (без проверки на существование и без --gecos)
+# Функция настройки пользователя
 configure_user() {
     echo "Настройка пользователя..."
-    # Запрос USER_UID, если не установлен
     if [ -z "$USER_UID" ]; then
         read -p "Введите UID для пользователя $USERNAME: " USER_UID
     fi
-    # Попытка создания пользователя с указанным USER_UID
     if adduser --uid "$USER_UID" "$USERNAME"; then
-        # Запрос пароля у пользователя
         read -s -p "Введите пароль для пользователя $USERNAME: " PASSWORD
         echo
         echo "$USERNAME:$PASSWORD" | chpasswd
@@ -234,46 +226,39 @@ edit_data() {
         echo "Текущие значения:"
         echo "1. Интерфейс ISP: $INTERFACE_ISP"
         echo "2. Интерфейс LAN: $INTERFACE_LAN"
-        echo "3. IP ISP: $IP_ISP"
-        echo "4. IP LAN: $IP_LAN"
-        echo "5. Шлюз по умолчанию: $DEFAULT_GW"
-        echo "6. Имя хоста: $HOSTNAME"
-        echo "7. Часовой пояс: $TIME_ZONE"
-        echo "8. Имя пользователя: $USERNAME"
-        echo "9. UID пользователя: $USER_UID"
-        echo "10. Текст баннера: $BANNER_TEXT"
-        echo "11. Локальный IP туннеля: $TUNNEL_LOCAL_IP"
-        echo "12. Удаленный IP туннеля: $TUNNEL_REMOTE_IP"
-        echo "13. IP туннеля: $TUNNEL_IP"
+        echo "3. IP LAN: $IP_LAN"
+        echo "4. Локальный IP туннеля: $TUNNEL_LOCAL_IP"
+        echo "5. Имя хоста: $HOSTNAME"
+        echo "6. Часовой пояс: $TIME_ZONE"
+        echo "7. Имя пользователя: $USERNAME"
+        echo "8. UID пользователя: $USER_UID"
+        echo "9. Текст баннера: $BANNER_TEXT"
+        echo "10. Удаленный IP туннеля: $TUNNEL_REMOTE_IP"
+        echo "11. IP туннеля: $TUNNEL_IP"
         echo "0. Назад"
-        echo "Введите номер параметра для изменения (или 0 для выхода):"
-        read choice
+        read -p "Введите номер параметра для изменения: " choice
         case $choice in
             1) read -p "Новый интерфейс ISP [$INTERFACE_ISP]: " input
                INTERFACE_ISP=${input:-$INTERFACE_ISP} ;;
             2) read -p "Новый интерфейс LAN [$INTERFACE_LAN]: " input
                INTERFACE_LAN=${input:-$INTERFACE_LAN} ;;
-            3) read -p "Новый IP ISP [$IP_ISP]: " input
-               IP_ISP=${input:-$IP_ISP} ;;
-            4) read -p "Новый IP LAN [$IP_LAN]: " input
+            3) read -p "Новый IP LAN [$IP_LAN]: " input
                IP_LAN=${input:-$IP_LAN} ;;
-            5) read -p "Новый шлюз по умолчанию [$DEFAULT_GW]: " input
-               DEFAULT_GW=${input:-$DEFAULT_GW} ;;
-            6) read -p "Новое имя хоста [$HOSTNAME]: " input
+            4) read -p "Новый локальный IP туннеля [$TUNNEL_LOCAL_IP]: " input
+               TUNNEL_LOCAL_IP=${input:-$TUNNEL_LOCAL_IP} ;;
+            5) read -p "Новое имя хоста [$HOSTNAME]: " input
                HOSTNAME=${input:-$HOSTNAME} ;;
-            7) read -p "Новый часовой пояс [$TIME_ZONE]: " input
+            6) read -p "Новый часовой пояс [$TIME_ZONE]: " input
                TIME_ZONE=${input:-$TIME_ZONE} ;;
-            8) read -p "Новое имя пользователя [$USERNAME]: " input
+            7) read -p "Новое имя пользователя [$USERNAME]: " input
                USERNAME=${input:-$USERNAME} ;;
-            9) read -p "Новый UID пользователя [$USER_UID]: " input
+            8) read -p "Новый UID пользователя [$USER_UID]: " input
                USER_UID=${input:-$USER_UID} ;;
-            10) read -p "Новый текст баннера [$BANNER_TEXT]: " input
-                BANNER_TEXT=${input:-$BANNER_TEXT} ;;
-            11) read -p "Новый локальный IP туннеля [$TUNNEL_LOCAL_IP]: " input
-                TUNNEL_LOCAL_IP=${input:-$TUNNEL_LOCAL_IP} ;;
-            12) read -p "Новый удаленный IP туннеля [$TUNNEL_REMOTE_IP]: " input
+            9) read -p "Новый текст баннера [$BANNER_TEXT]: " input
+               BANNER_TEXT=${input:-$BANNER_TEXT} ;;
+            10) read -p "Новый удаленный IP туннеля [$TUNNEL_REMOTE_IP]: " input
                 TUNNEL_REMOTE_IP=${input:-$TUNNEL_REMOTE_IP} ;;
-            13) read -p "Новый IP туннеля [$TUNNEL_IP]: " input
+            11) read -p "Новый IP туннеля [$TUNNEL_IP]: " input
                 TUNNEL_IP=${input:-$TUNNEL_IP} ;;
             0) return ;;
             *) echo "Неверный выбор." ;;
