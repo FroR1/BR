@@ -2,11 +2,10 @@
 
 # === НАСТРОЙКИ ПО УМОЛЧАНИЮ ===
 HOSTNAME="br-srv.au-team.irpo"
-IP_ADDR="192.168.0.2"
 SSHUSER="sshuser"
 SSHUSER_UID="1010"
 SSHUSER_PASS="P@ssw0rd"
-TZ="Asia/Yekaterinburg"
+TZ="Asia/Novosibirsk"
 SSH_PORT="2024"
 BANNER="Authorized access only"
 
@@ -64,22 +63,7 @@ function set_hostname() {
     sleep 2
 }
 
-# === 2. Настройка IP-адресации ===
-function set_ip() {
-    IFACE=$(ip -o -4 route show to default | awk '{print $5}')
-    cat > /etc/net/ifaces/$IFACE/options <<EOF
-BOOTPROTO=static
-ADDRESS=$IP_ADDR
-TYPE=eth
-DISABLED=no
-CONFIG_IPV4=yes
-EOF
-    systemctl restart network
-    echo "IP-адрес $IP_ADDR установлен на $IFACE"
-    sleep 2
-}
-
-# === 3. Создание пользователя sshuser ===
+# === 2. Создание пользователя sshuser ===
 function create_sshuser() {
     id "$SSHUSER" &>/dev/null || useradd -u "$SSHUSER_UID" -m "$SSHUSER"
     echo "$SSHUSER:$SSHUSER_PASS" | chpasswd
@@ -89,7 +73,7 @@ function create_sshuser() {
     sleep 2
 }
 
-# === 4. Настройка SSH ===
+# === 3. Настройка SSH ===
 function config_ssh() {
     sed -i "s/^#*Port .*/Port $SSH_PORT/" /etc/ssh/sshd_config
     sed -i "s/^#*PermitRootLogin .*/PermitRootLogin no/" /etc/ssh/sshd_config
@@ -106,17 +90,16 @@ function config_ssh() {
     sleep 2
 }
 
-# === 5. Настройка часового пояса ===
+# === 4. Настройка часового пояса ===
 function set_timezone() {
     timedatectl set-timezone "$TZ"
     echo "Часовой пояс установлен: $TZ"
     sleep 2
 }
 
-# === 6. Настроить всё сразу ===
+# === 5. Настроить всё сразу ===
 function do_all() {
     set_hostname
-    set_ip
     create_sshuser
     config_ssh
     set_timezone
@@ -131,21 +114,19 @@ function main_menu() {
         echo "=== МЕНЮ НАСТРОЙКИ BR-SRV ==="
         echo "1. Ввод/изменение данных"
         echo "2. Сменить имя хоста"
-        echo "3. Настроить IP-адрес"
-        echo "4. Создать пользователя SSH ($SSHUSER)"
-        echo "5. Настроить SSH"
-        echo "6. Настроить часовой пояс"
-        echo "7. Настроить всё сразу"
+        echo "3. Создать пользователя SSH ($SSHUSER)"
+        echo "4. Настроить SSH"
+        echo "5. Настроить часовой пояс"
+        echo "6. Настроить всё сразу"
         echo "0. Выйти"
         read -p "Выберите пункт: " choice
         case "$choice" in
             1) input_menu ;;
             2) set_hostname ;;
-            3) set_ip ;;
-            4) create_sshuser ;;
-            5) config_ssh ;;
-            6) set_timezone ;;
-            7) do_all ;;
+            3) create_sshuser ;;
+            4) config_ssh ;;
+            5) set_timezone ;;
+            6) do_all ;;
             0) clear; exit 0 ;;
             *) echo "Ошибка ввода"; sleep 1 ;;
         esac
