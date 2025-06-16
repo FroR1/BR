@@ -65,34 +65,39 @@ function set_hostname() {
 
 # === 2. Создание пользователя sshuser ===
 function create_sshuser() {
-    echo "Создание пользователя $SSHUSER..."
-    if id "$SSHUSER" &>/dev/null; then
-        echo "Пользователь $SSHUSER уже существует, обновление пароля и прав..."
-    else
-        useradd -u "$SSHUSER_UID" -m "$SSHUSER" || { echo "Ошибка создания пользователя $SSHUSER"; exit 1; }
+    echo "Настройка пользователя..."
+    if [ -z "$SSHUSER_UID" ]; then
+        read -p "Введите UID для пользователя $SSHUSER: " SSHUSER_UID
     fi
-    echo "$SSHUSER:$SSHUSER_PASS" | chpasswd
-    usermod -aG wheel "$SSHUSER"
-    # Удаляем старую строку в sudoers, если она есть
-    sed -i "/^$SSHUSER /d" /etc/sudoers
-    # Добавляем новую строку для NOPASSWD
-    echo "$SSHUSER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-    echo "Пользователь $SSHUSER создан с UID $SSHUSER_UID и правами sudo без пароля"
+    if adduser --uid "$SSHUSER_UID" "$SSHUSER"; then
+        read -s -p "Введите пароль для пользователя $SSHUSER: " PASSWORD
+        echo
+        echo "$SSHUSER:$PASSWORD" | chpasswd
+        echo "$SSHUSER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+        usermod -aG wheel "$SSHUSER"
+        echo "Пользователь $SSHUSER создан с UID $SSHUSER_UID и правами sudo."
+    else
+        echo "Ошибка: Не удалось создать пользователя $SSHUSER."
+        exit 1
+    fi
     sleep 2
 }
 
 # === 3. Настройка SSH ===
 function config_ssh() {
-    sed -i "s/^#*Port .*/Port $SSH_PORT/" /etc/ssh/sshd_config
-    sed -i "s/^#*PermitRootLogin .*/PermitRootLogin no/" /etc/ssh/sshd_config
-    grep -q "^AllowUsers" /etc/ssh/sshd_config && \
-        sed -i "s/^AllowUsers .*/AllowUsers $SSHUSER/" /etc/ssh/sshd_config || \
-        echo "AllowUsers $SSHUSER" >> /etc/ssh/sshd_config
-    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries 2/" /etc/ssh/sshd_config
-    echo "$BANNER" > /etc/issue.net
-    grep -q "^Banner" /etc/ssh/sshd_config && \
-        sed -i "s|^Banner .*|Banner /etc/issue.net|" /etc/ssh/sshd_config || \
-        echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
+    echo "Настройка баннера SSH..."
+    echo "$BANNER" > /etc/banner
+    if grep -q "^Banner" /etc/openssh/sshd_config; then
+        sed -i 's|^Banner.*|Banner /etc/banner|' /etc/openssh/sshd_config
+    else
+        echo "Banner /etc/banner" >> /etc/openssh/sshd_config
+    fi
+    sed -i "s/^#*Port .*/Port $SSH_PORT/" /etc/openssh/sshd_config
+    sed -i "s/^#*PermitRootLogin .*/PermitRootLogin no/" /etc/openssh/sshd_config
+    grep -q "^AllowUsers" /etc/openssh/sshd_config && \
+        sed -i "s/^AllowUsers .*/AllowUsers $SSHUSER/" /etc/openssh/sshd_config || \
+        echo "AllowUsers $SSHUSER" >> /etc/openssh/sshd_config
+    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries 2/" /etc/openssh/sshd_config
     systemctl restart sshd
     echo "SSH настроен: порт $SSH_PORT, только $SSHUSER, 2 попытки, баннер"
     sleep 2
