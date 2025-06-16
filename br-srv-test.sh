@@ -2,9 +2,7 @@
 
 # === НАСТРОЙКИ ПО УМОЛЧАНИЮ ===
 HOSTNAME="br-srv.au-team.irpo"
-INTERFACE="ens192"  # Интерфейс для настройки IP
 IP_ADDR="192.168.0.2"
-NETMASK="255.255.255.0"
 SSHUSER="sshuser"
 SSHUSER_UID="1010"
 SSHUSER_PASS="P@ssw0rd"
@@ -18,7 +16,7 @@ function input_menu() {
         clear
         echo "=== Подменю ввода/изменения данных ==="
         echo "1. Изменить имя машины (текущее: $HOSTNAME)"
-        echo "2. Изменить интерфейс ($INTERFACE), маску сети ($NETMASK), порт SSH ($SSH_PORT)"
+        echo "2. Изменить порт SSH (текущий: $SSH_PORT)"
         echo "3. Изменить имя пользователя SSH (текущее: $SSHUSER)"
         echo "4. Изменить UID пользователя SSH (текущий: $SSHUSER_UID)"
         echo "5. Изменить пароль пользователя SSH"
@@ -29,13 +27,8 @@ function input_menu() {
         read -p "Выберите пункт: " subchoice
         case "$subchoice" in
             1) read -p "Введите новое имя машины: " HOSTNAME ;;
-            2) 
-                read -p "Введите новый интерфейс [$INTERFACE]: " input
-                INTERFACE=${input:-$INTERFACE}
-                read -p "Введите новую маску сети [$NETMASK]: " input
-                NETMASK=${input:-$NETMASK}
-                read -p "Введите новый порт SSH [$SSH_PORT]: " input
-                SSH_PORT=${input:-$SSH_PORT} ;;
+            2) read -p "Введите новый порт SSH [$SSH_PORT]: " input
+               SSH_PORT=${input:-$SSH_PORT} ;;
             3) read -p "Введите новое имя пользователя SSH: " SSHUSER ;;
             4) read -p "Введите новый UID пользователя SSH: " SSHUSER_UID ;;
             5) read -s -p "Введите новый пароль пользователя SSH: " SSHUSER_PASS; echo ;;
@@ -43,13 +36,11 @@ function input_menu() {
             7) read -p "Введите новый баннер SSH: " BANNER ;;
             8)
                 read -p "Имя машины: " HOSTNAME
-                read -p "Интерфейс: " INTERFACE
-                read -p "Маска сети: " NETMASK
+                read -p "Порт SSH: " SSH_PORT
                 read -p "Имя пользователя SSH: " SSHUSER
                 read -p "UID пользователя SSH: " SSHUSER_UID
                 read -s -p "Пароль пользователя SSH: " SSHUSER_PASS; echo
                 read -p "Часовой пояс: " TZ
-                read -p "Порт SSH: " SSH_PORT
                 read -p "Баннер SSH: " BANNER
                 ;;
             0) break ;;
@@ -75,16 +66,16 @@ function set_hostname() {
 
 # === 2. Настройка IP-адресации ===
 function set_ip() {
-    cat > /etc/net/ifaces/$INTERFACE/options <<EOF
+    IFACE=$(ip -o -4 route show to default | awk '{print $5}')
+    cat > /etc/net/ifaces/$IFACE/options <<EOF
 BOOTPROTO=static
 ADDRESS=$IP_ADDR
-NETMASK=$NETMASK
 TYPE=eth
 DISABLED=no
 CONFIG_IPV4=yes
 EOF
     systemctl restart network
-    echo "IP-адрес $IP_ADDR/$NETMASK установлен на $INTERFACE"
+    echo "IP-адрес $IP_ADDR установлен на $IFACE"
     sleep 2
 }
 
