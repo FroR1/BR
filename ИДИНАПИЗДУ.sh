@@ -56,7 +56,7 @@ configure_interfaces() {
     
     mkdir -p /etc/net/ifaces/"$INTERFACE_ISP"
     cat > /etc/net/ifaces/"$INTERFACE_ISP"/options << EOF
-BOOTPROTO=none
+BOOTPROTO=static
 TYPE=eth
 DISABLED=no
 CONFIG_IPV4=yes
