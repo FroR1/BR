@@ -8,7 +8,6 @@ SSHUSER_PASS="P@ssw0rd"
 TZ="Asia/Novosibirsk"
 SSH_PORT="2024"
 BANNER="Authorized access only"
-MAX_AUTH_TRIES="2"
 
 # === ФУНКЦИИ ДЛЯ ВВОДА ДАННЫХ ===
 function input_menu() {
@@ -19,9 +18,9 @@ function input_menu() {
         echo "2. Изменить порт SSH (текущий: $SSH_PORT)"
         echo "3. Изменить имя пользователя SSH (текущее: $SSHUSER)"
         echo "4. Изменить UID пользователя SSH (текущий: $SSHUSER_UID)"
-        echo "5. Изменить часовой пояс (текущий: $TZ)"
-        echo "6. Изменить баннер SSH (текущий: $BANNER)"
-        echo "7. Изменить максимальное количество попыток входа (текущее: $MAX_AUTH_TRIES)"
+        echo "5. Изменить пароль пользователя SSH"
+        echo "6. Изменить часовой пояс (текущий: $TZ)"
+        echo "7. Изменить баннер SSH (текущий: $BANNER)"
         echo "8. Изменить все параметры сразу"
         echo "0. Назад"
         read -p "Выберите пункт: " subchoice
@@ -31,10 +30,9 @@ function input_menu() {
                SSH_PORT=${input:-$SSH_PORT} ;;
             3) read -p "Введите новое имя пользователя SSH: " SSHUSER ;;
             4) read -p "Введите новый UID пользователя SSH: " SSHUSER_UID ;;
-            5) read -p "Введите новый часовой пояс: " TZ ;;
-            6) read -p "Введите новый баннер SSH: " BANNER ;;
-            7) read -p "Введите новое количество попыток входа [$MAX_AUTH_TRIES]: " input
-               MAX_AUTH_TRIES=${input:-$MAX_AUTH_TRIES} ;;
+            5) read -s -p "Введите новый пароль пользователя SSH: " SSHUSER_PASS; echo ;;
+            6) read -p "Введите новый часовой пояс: " TZ ;;
+            7) read -p "Введите новый баннер SSH: " BANNER ;;
             8)
                 read -p "Имя машины: " HOSTNAME
                 read -p "Порт SSH: " SSH_PORT
@@ -43,7 +41,6 @@ function input_menu() {
                 read -s -p "Пароль пользователя SSH: " SSHUSER_PASS; echo
                 read -p "Часовой пояс: " TZ
                 read -p "Баннер SSH: " BANNER
-                read -p "Максимальное количество попыток входа: " MAX_AUTH_TRIES
                 ;;
             0) break ;;
             *) echo "Ошибка ввода"; sleep 1 ;;
@@ -68,41 +65,36 @@ function set_hostname() {
 
 # === 2. Создание пользователя sshuser ===
 function create_sshuser() {
-    echo "Настройка пользователя..."
-    if [ -z "$SSHUSER_UID" ]; then
-        read -p "Введите UID для пользователя $SSHUSER: " SSHUSER_UID
-    fi
-    if adduser --uid "$SSHUSER_UID" "$SSHUSER"; then
-        read -s -p "Введите пароль для пользователя $SSHUSER: " PASSWORD
-        echo
-        echo "$SSHUSER:$PASSWORD" | chpasswd
-        echo "$SSHUSER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-        usermod -aG wheel "$SSHUSER"
-        echo "Пользователь $SSHUSER создан с UID $SSHUSER_UID и правами sudo."
+    echo "Создание пользователя $SSHUSER..."
+    if id "$SSHUSER" &>/dev/null; then
+        echo "Пользователь $SSHUSER уже существует, обновление пароля и прав..."
     else
-        echo "Ошибка: Не удалось создать пользователя $SSHUSER."
-        exit 1
+        useradd -u "$SSHUSER_UID" -m "$SSHUSER" || { echo "Ошибка создания пользователя $SSHUSER"; exit 1; }
     fi
+    echo "$SSHUSER:$SSHUSER_PASS" | chpasswd
+    usermod -aG sudo "$SSHUSER"
+    # Удаляем старую строку в sudoers, если она есть
+    sed -i "/^$SSHUSER /d" /etc/sudoers
+    # Добавляем новую строку для NOPASSWD
+    echo "$SSHUSER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    echo "Пользователь $SSHUSER создан с UID $SSHUSER_UID и правами sudo без пароля"
     sleep 2
 }
 
 # === 3. Настройка SSH ===
 function config_ssh() {
-    echo "Настройка баннера SSH..."
-    echo "$BANNER" > /etc/banner
-    if grep -q "^Banner" /etc/openssh/sshd_config; then
-        sed -i 's|^Banner.*|Banner /etc/banner|' /etc/openssh/sshd_config
-    else
-        echo "Banner /etc/banner" >> /etc/openssh/sshd_config
-    fi
-    sed -i "s/^#*Port .*/Port $SSH_PORT/" /etc/openssh/sshd_config
-    sed -i "s/^#*PermitRootLogin .*/PermitRootLogin no/" /etc/openssh/sshd_config
-    grep -q "^AllowUsers" /etc/openssh/sshd_config && \
-        sed -i "s/^AllowUsers .*/AllowUsers $SSHUSER/" /etc/openssh/sshd_config || \
-        echo "AllowUsers $SSHUSER" >> /etc/openssh/sshd_config
-    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries $MAX_AUTH_TRIES/" /etc/openssh/sshd_config
+    sed -i "s/^#*Port .*/Port $SSH_PORT/" /etc/ssh/sshd_config
+    sed -i "s/^#*PermitRootLogin .*/PermitRootLogin no/" /etc/ssh/sshd_config
+    grep -q "^AllowUsers" /etc/ssh/sshd_config && \
+        sed -i "s/^AllowUsers .*/AllowUsers $SSHUSER/" /etc/ssh/sshd_config || \
+        echo "AllowUsers $SSHUSER" >> /etc/ssh/sshd_config
+    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries 2/" /etc/ssh/sshd_config
+    echo "$BANNER" > /etc/issue.net
+    grep -q "^Banner" /etc/ssh/sshd_config && \
+        sed -i "s|^Banner .*|Banner /etc/issue.net|" /etc/ssh/sshd_config || \
+        echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
     systemctl restart sshd
-    echo "SSH настроен: порт $SSH_PORT, только $SSHUSER, $MAX_AUTH_TRIES попытки, баннер"
+    echo "SSH настроен: порт $SSH_PORT, только $SSHUSER, 2 попытки, баннер"
     sleep 2
 }
 
