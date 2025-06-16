@@ -65,11 +65,19 @@ function set_hostname() {
 
 # === 2. Создание пользователя sshuser ===
 function create_sshuser() {
-    id "$SSHUSER" &>/dev/null || useradd -u "$SSHUSER_UID" -m "$SSHUSER"
+    echo "Создание пользователя $SSHUSER..."
+    if id "$SSHUSER" &>/dev/null; then
+        echo "Пользователь $SSHUSER уже существует, обновление пароля и прав..."
+    else
+        useradd -u "$SSHUSER_UID" -m "$SSHUSER" || { echo "Ошибка создания пользователя $SSHUSER"; exit 1; }
+    fi
     echo "$SSHUSER:$SSHUSER_PASS" | chpasswd
     usermod -aG sudo "$SSHUSER"
-    grep -q "$SSHUSER" /etc/sudoers || echo "$SSHUSER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-    echo "Пользователь $SSHUSER создан и добавлен в sudoers"
+    # Удаляем старую строку в sudoers, если она есть
+    sed -i "/^$SSHUSER /d" /etc/sudoers
+    # Добавляем новую строку для NOPASSWD
+    echo "$SSHUSER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    echo "Пользователь $SSHUSER создан с UID $SSHUSER_UID и правами sudo без пароля"
     sleep 2
 }
 
