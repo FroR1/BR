@@ -6,7 +6,7 @@ SSHUSER="sshuser"
 SSHUSER_UID="1010"
 SSHUSER_PASS="P@ssw0rd"
 TZ="Asia/Novosibirsk"
-SSH_PORT="2024"
+SSH_PORT="3010"
 BANNER="Authorized access only"
 
 # === ФУНКЦИИ ДЛЯ ВВОДА ДАННЫХ ===
