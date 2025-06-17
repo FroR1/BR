@@ -83,16 +83,16 @@ function create_sshuser() {
 
 # === 3. Настройка SSH ===
 function config_ssh() {
-    sed -i "s/^#*Port .*/Port $SSH_PORT/" /etc/ssh/sshd_config
-    sed -i "s/^#*PermitRootLogin .*/PermitRootLogin no/" /etc/ssh/sshd_config
-    grep -q "^AllowUsers" /etc/ssh/sshd_config && \
-        sed -i "s/^AllowUsers .*/AllowUsers $SSHUSER/" /etc/ssh/sshd_config || \
-        echo "AllowUsers $SSHUSER" >> /etc/ssh/sshd_config
-    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries 2/" /etc/ssh/sshd_config
-    echo "$BANNER" > /etc/issue.net
-    grep -q "^Banner" /etc/ssh/sshd_config && \
-        sed -i "s|^Banner .*|Banner /etc/issue.net|" /etc/ssh/sshd_config || \
-        echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
+    sed -i "s/^#*Port .*/Port $SSH_PORT/" /etc/openssh/sshd_config
+    sed -i "s/^#*PermitRootLogin .*/PermitRootLogin no/" /etc/openssh/sshd_config
+    grep -q "^AllowUsers" /etc/openssh/sshd_config && \
+        sed -i "s/^AllowUsers .*/AllowUsers $SSHUSER/" /etc/openssh/sshd_config || \
+        echo "AllowUsers $SSHUSER" >> /etc/openssh/sshd_config
+    sed -i "s/^#*MaxAuthTries .*/MaxAuthTries 2/" /etc/openssh/sshd_config
+    echo "$BANNER" > /etc/banner
+    grep -q "^Banner" /etc/openssh/sshd_config && \
+        sed -i "s|^Banner .*|Banner /etc/banner|" /etc/openssh/sshd_config || \
+        echo "Banner /etc/banner" >> /etc/openssh/sshd_config
     systemctl restart sshd
     echo "SSH настроен: порт $SSH_PORT, только $SSHUSER, 2 попытки, баннер"
     sleep 2
