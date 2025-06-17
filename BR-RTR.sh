@@ -15,14 +15,14 @@ install_dependencies
 # Начальные значения переменных (Вариант 7 из Ответы.txt)
 INTERFACE_ISP="ens192"
 INTERFACE_LAN="ens224"
-IP_LAN="10.1.1.1/27"
+IP_LAN="10.1.1.1/28"
 HOSTNAME="br-rtr.au-team.irpo"
 TIME_ZONE="Asia/Novosibirsk"
 USERNAME="net_admin"
 USER_UID=1010
 BANNER_TEXT="Только для авторизованного доступа"
-TUNNEL_LOCAL_IP="172.16.19.2"  # IP BR-RTR к провайдеру
-TUNNEL_REMOTE_IP="172.16.18.2" # IP HQ-RTR к провайдеру
+TUNNEL_LOCAL_IP="172.16.50.2"  # IP BR-RTR к провайдеру
+TUNNEL_REMOTE_IP="172.16.40.2" # IP HQ-RTR к провайдеру
 TUNNEL_IP="172.16.100.2/28"   # IP туннеля для BR-RTR
 TUNNEL_NAME="tun1"
 
